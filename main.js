@@ -1,50 +1,59 @@
 metricDistances = ["30m", "40m", "50m", "60m"];
 imperialDistances = ["20yd", "30yd", "40yd", "50yd", "60yd", "70yd", "80yd", "90yd", "100yd", "110yd"];
+//const agbOutdoorImperial = require("res/AGB_outdoor_imperial.json");
+var agbOutdoorImperial, agbOutdoorMetric, allRounds, roundName;
 
-rounds = [
-    {
-        name: "Warwick",
-        distance1: "60yd",
-        distance2: "50yd",
-        distance3: "None",
-        distance1Ends: 4,
-        distance2Ends: 4,
-        distance3Ends: 0,
-    }
-]
+var end_arrows, roundID, n_ends;
 
 const db = new Dexie("ArcheryBuddy");
-db.version(1).stores({
+db.version(2).stores({
     sightMarks: '++id, distance',
-    scores: '++id, round'
+    scores: '++id, round, final'
 });
 
 
-$(document).ready(function () {
+$(document).ready(async function () {
+    await parseRounds()
+    populateSavedRounds()
     populateSightMarkSelect()
     populateRecordRoundSelect()
     populateSightMarkTable()
     populateIndividualMarks()
     showCard("recordRound")
+
 });
+
+async function parseRounds() {
+    agbOutdoorImperial = await $.getJSON("res/AGB_outdoor_imperial.json");
+    agbOutdoorMetric = await $.getJSON("res/AGB_outdoor_metric.json");
+    allRounds = agbOutdoorImperial.concat(agbOutdoorMetric);
+}
+
+function recordRound() {
+    showCard("recordRound")
+    hide("#roundSheet")
+    show("#loadingCard")
+}
 
 //Add all distances to the addSightMarkSelect Select as an option
 function populateSightMarkSelect() {
-    processList(metricDistances)
-    processList(imperialDistances)
-    function processList(list) {
-        for (distance of list) {
-            newElement = document.createElement("option");
-            newElement.value = distance;
-            newElement.innerHTML = distance;
-            document.querySelector("#addSightMarkSelect").appendChild(newElement);
+    for (dropdown of ["#addSightMarkSelect", "#viewSightMarksSelect"]) {
+        processList(metricDistances)
+        processList(imperialDistances)
+        function processList(list) {
+            for (distance of list) {
+                newElement = document.createElement("option");
+                newElement.value = distance;
+                newElement.innerHTML = distance;
+                document.querySelector(dropdown).appendChild(newElement);
+            }
         }
     }
 }
 
 //Generate Record Table Based on recordRoundSelect
 function populateRecordRoundSelect() {
-    for (round of rounds) {
+    for (round of allRounds) {
         newElement = document.createElement("option");
         newElement.value = round.name;
         newElement.innerHTML = round.name;
@@ -56,8 +65,8 @@ function populateRecordRoundSelect() {
 function populateSightMarkTable() {
     let smt = document.querySelector("#sightMarkTable");
     smt.innerHTML = "";
-    processList(metricDistances);
-    processList(imperialDistances);
+    processList(metricDistances.concat(imperialDistances));
+    //    processList(imperialDistances);
 
     async function processList(distances) {
         for (distance of distances) {
@@ -69,67 +78,51 @@ function populateSightMarkTable() {
             console.log(dbrow);
             let newRow = document.createElement("tr");
             let tag = document.createElement("td");
-            tag.innerHTML = distance;
+            tag.innerHTML = dbrow[last]["distance"]
             let value = document.createElement("td");
             value.innerHTML = dbrow[last]["mark"]
-            let date = document.createElement("td");
-            date.innerHTML = dbrow[last]["date"]
+            /*let date = document.createElement("td");
+            date.innerHTML = dbrow[last]["date"]*/
             newRow.appendChild(tag);
             newRow.appendChild(value);
-            newRow.appendChild(date);
+            //newRow.appendChild(date);
             smt.appendChild(newRow);
         }
     }
 }
 
 //Populate Individual Marks Tables
-function populateIndividualMarks() {
-    let parent = document.querySelector("#individualMarks")
+async function populateIndividualMarks() {
+    let parent = document.querySelector("#individualSightMarkTable")
+    let selectedMark = document.querySelector("#viewSightMarksSelect").value;
     parent.innerHTML = "";
-    processList(metricDistances)
-    processList(imperialDistances)
-    function processList(list) {
-        for (distance of list) {
-
-            //Create Card
-            let card = document.createElement("div");
-            card.classList.add("card")
-            card.classList.add("p-3")
-            parent.appendChild(card);
-
-            //Add heading
-            let ele = document.createElement("h6");
-            ele.innerHTML = distance;
-            card.appendChild(ele);
-
-            //Create table
-            let t = document.createElement("table");
-            card.appendChild(t);
-            t.classList.add("table");
-            t.classList.add("table-sm");
-
-            //Create Headers
-            let thead = document.createElement("thead");
-            t.appendChild(thead);
-            let th1 = document.createElement("th");
-            th1.innerHTML = "Sight Mark";
-            thead.appendChild(th1);
-            let th2 = document.createElement("th");
-            th2.innerHTML = "Date";
-            thead.appendChild(th2);
-
-            //Create Body - TBD
-            let tbody = document.createElement("tbody");
-            t.append(tbody);
-
-            parent.appendChild(document.createElement("br"));
-
-
-
-
-        }
-
+    let marks = await db.sightMarks.where("distance").equals(selectedMark).toArray();
+    console.log("marks")
+    console.log(marks)
+    if (marks.length == 0) {
+        return;
     }
+    for (mark of marks) {
+
+        let tr = document.createElement("tr");
+
+        let td1 = document.createElement("td");
+        td1.innerHTML = mark["distance"]
+
+        let td2 = document.createElement("td");
+        td2.innerHTML = mark["mark"]
+
+        let td3 = document.createElement("td");
+        td3.innerHTML = mark["date"]
+
+        for (each of [td1, td2, td3]) {
+            tr.appendChild(each)
+        }
+        parent.appendChild(tr)
+    }
+
+
+
 }
 
 //Show/Hide Cards
@@ -149,7 +142,318 @@ function showCard(cardName) {
 function addSightMark() {
     let dist = document.querySelector("#addSightMarkSelect").value
     let mark = document.querySelector("#addSightMarkText").value
+    if (mark == "") {
+        return false;
+    }
     let time = new Date().toDateString();
     db.sightMarks.put({ "distance": dist, "mark": mark, "date": time })
     populateSightMarkTable();
+}
+
+function getRoundByName(namestr) {
+    return allRounds.filter(
+        function (data) { return data.name == namestr }
+    );
+}
+
+function generateRoundSheetFromSelect() {
+    let round = document.querySelector("#recordRoundSelect").value;
+    generateRoundSheet(round);
+
+}
+function generateRoundSheet(inputRound) {
+    hide("#loadingCard")
+    console.log(inputRound);
+    let round = getRoundByName(inputRound)[0];
+    roundName = round.name;
+    roundID = new Date().getTime();
+    let parent = document.querySelector("#roundSheet");
+    end_arrows = 6;
+    let endNum = 0;
+    parent.innerHTML = "";
+    console.log(round)
+
+    let t = document.createElement("h3");
+    t.innerHTML = roundName;
+    parent.appendChild(t);
+
+    let id = document.createElement("p");
+    id.innerHTML = roundID;
+    id.style.fontSize = "xx-small";
+    id.id = "roundID";
+    parent.appendChild(id);
+
+
+    for (pass of round.passes) {
+        n_ends = pass.n_arrows / end_arrows;
+        console.log(n_ends);
+        //Make label with distance
+        let h = document.createElement("h4");
+        h.innerHTML = pass.distance + pass.dist_unit
+        h.classList.add("text-end")
+        parent.appendChild(h)
+
+
+        for (let i = 0; i < n_ends; i++) {
+            endNum++
+            let endID = "end_" + endNum;
+
+            let endTitle = document.createElement("h6");
+            endTitle.innerHTML = "End " + endNum;
+            parent.appendChild(endTitle);
+
+
+
+            let row = newRow();
+
+
+            for (let j = 0; j < end_arrows; j++) {
+                row.appendChild(scoreInput(endID + "_a_" + (j + 1)));
+            }
+
+            let row2 = newRow();
+
+
+            for (field of ["a_hits", "a_miss", "a_golds", "a_x", "a_total"]) {
+                row2.appendChild(scoreInfo(endID + "_" + field));
+            }
+
+            parent.appendChild(row);
+            parent.appendChild(row2);
+            row.addEventListener("change", function () {
+                totalise("#" + endID);
+                saveScore();
+            })
+            parent.appendChild(breakRow())
+        }
+        parent.appendChild(breakRow())
+
+        //Create sheet for pass.n_arrows / 6 or 3 depending on end size
+
+        //Table has 6 or 3 score entries + hits, Xs, golds, running total 
+
+    }
+    //parent.appendChild(saveButton()); Removed as form now saves automatically
+    parent.appendChild(deleteButton());
+    parent.appendChild(submitButton());
+
+    parent.style.display = "block";
+}
+
+//Get total field totalise(end_1)
+//a_tot child of end_1 
+//get 
+function newRow() {
+    let row = document.createElement("div");
+    row.classList.add("d-flex")
+    row.classList.add("flex-nowrap")
+
+    return row
+}
+function totalise(id) {
+    let parent = document.querySelector(id)
+    let ele_hits = document.querySelector(id + "_a_hits");
+    let ele_golds = document.querySelector(id + "_a_golds");
+    let ele_total = document.querySelector(id + "_a_total");
+    let ele_miss = document.querySelector(id + "_a_miss");
+    let ele_exes = document.querySelector(id + "_a_x");
+
+    let total = 0;
+    let hits = 0;
+    let golds = 0;
+    let exes = 0;
+    let misses = 0;
+
+    for (i = 0; i < end_arrows; i++) {
+        let arrow = i + 1;
+        let arrowid = id + "_" + "a_" + arrow;
+        console.log(arrowid);
+        let val = document.querySelector(arrowid).value;
+        switch (val) {
+            case "x":
+            case "X":
+                exes++
+                val = 10
+                break;
+            case "m":
+            case "M":
+                misses++
+                val = 0
+                break;
+        }
+        total += parseInt(val == "" ? 0 : val);
+
+        if (val > 0) {
+            hits++
+        }
+        if (val > 9) {
+            golds++
+        }
+    }
+    ele_hits.innerHTML = "Hits<br>" + hits;
+    ele_golds.innerHTML = "Golds<br>" + golds;
+    ele_total.innerHTML = "Total<br>" + total;
+    ele_miss.innerHTML = "Misses<br>" + misses;
+    ele_exes.innerHTML = "Xs<br>" + exes;
+
+}
+
+function scoreInput(id) {
+    let ele = document.createElement("input")
+    ele.classList.add("form-control")
+    ele.type = "text"
+    ele.id = id
+    ele.maxLength = "2"
+
+    return ele
+}
+
+function scoreInfo(id) {
+    let ele = document.createElement("label")
+    ele.classList.add("form-control")
+    ele.classList.add("bg-light")
+    ele.classList.add("text-center")
+    ele.readOnly = true;
+    ele.size = "2"
+    ele.id = id
+    return ele
+}
+
+/*function saveButton() {
+    let ele = document.createElement("button")
+    ele.type = "button"
+    ele.innerHTML = "Save"
+    ele.classList.add("btn")
+    ele.classList.add("btn-warning")
+    return ele
+} -- Now Saves Automagically*/
+
+function submitButton() {
+    let ele = document.createElement("button")
+    ele.type = "button"
+    ele.innerHTML = "Submit"
+    ele.classList.add("btn")
+    ele.classList.add("btn-success")
+    ele.onclick = submitScore;
+    return ele
+}
+
+function deleteButton() {
+    let ele = document.createElement("button")
+    ele.type = "button"
+    ele.innerHTML = "Delete Scorecard"
+    ele.classList.add("btn")
+    ele.classList.add("btn-danger")
+    ele.onclick = deleteScorecard;
+    return ele;
+}
+
+async function deleteScorecard() {
+    let confirmText = "This will permanently delete this scorecard, are you sure?"
+    if (!confirm(confirmText)) {
+        return false;
+    }
+    wipe("#roundSheet")
+    hide("#roundSheet")
+    let scorecard = document.querySelector("#roundSheet");
+    scorecard.innerHTML = "";
+    scorecard.style.display = "none";
+    let id = parseInt(roundID);
+    await db.scores.where("id").equals(id).delete()
+    populateSavedRounds();
+    show("#loadingCard")
+    return true;
+
+}
+
+function breakRow() {
+    let ele = document.createElement("br");
+    return ele
+}
+
+function genScore() {
+    let datestamp = new Date().toDateString();
+    let newScore = {
+        id: roundID,
+        round: roundName,
+        ends: n_ends,
+        arrowsPerEnd: end_arrows,
+        final: 0,
+        date: datestamp,
+    }
+    let scoreElements = document.querySelectorAll("#roundSheet input");
+    let scores = []
+    for (element of scoreElements) {
+        scores.push(element.value ?? "");
+    }
+    newScore.scores = scores;
+    return newScore;
+    //get all inputs within elements within end_x for each end
+}
+
+
+function saveScore() {
+    db.scores.put(genScore());
+}
+
+function submitScore() {
+    let atext = "This will finalise your score, are you sure?";
+    if (confirm(atext)) {
+        score = genScore();
+        score.final = 1;
+        db.scores.put(score);
+    }
+    wipe("#roundSheet")
+    hide("#roundSheet")
+    loadRoundStats(score.id)
+    showCard("stats")
+}
+
+async function populateSavedRounds() {
+    let ele = document.querySelector("#loadRoundSelect");
+    ele.innerHTML = "";
+    let savedRounds = await db.scores.where("final").equals(0).toArray();
+    console.log(savedRounds);
+    for (round of savedRounds) {
+        ele.appendChild(selectOption(round.id, (round.round + " - " + round.date)));
+    }
+}
+
+async function loadSavedRound() {
+    let select = document.querySelector("#loadRoundSelect");
+    let savedID = parseInt(select.value);
+    let rows = await db.scores.where("id").equals(savedID).toArray();
+    let scores = rows[0]
+    console.log(scores);
+    generateRoundSheet(scores.round)
+    end_arrows = scores.arrowsPerEnd;
+    n_ends = scores.ends;
+    roundID = scores.id;
+    document.querySelector("#roundID").innerHTML = roundID;
+    let scoreInputs = document.querySelectorAll("#roundSheet input");
+    for (i = 0; i < scoreInputs.length; i++) {
+        scoreInputs[i].value = scores.scores[i];
+    }
+
+
+
+}
+
+function selectOption(value, text) {
+    let option = document.createElement("option");
+    option.value = value;
+    option.innerHTML = text;
+    return option
+}
+
+function hide(id) {
+    document.querySelector(id).style.display = "none";
+}
+
+function show(id) {
+    document.querySelector(id).style.display = "block";
+}
+
+function wipe(id) {
+    document.querySelector(id).innerHTML = "";
 }

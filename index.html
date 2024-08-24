@@ -21,30 +21,24 @@
 
         <!-- Record Round Card -->
         <div id="recordRound">
-            <div>
+            <br>
+            <div id="loadingCard" class="card p-3">
+                <h3>Load a saved Round:</h3>
                 <div class="input-group">
-                    <select name="recordRoundSelect" id="recordRoundSelect">
+                    <select class="form-control" name=" loadRoundSelect" id="loadRoundSelect">
+
                     </select>
-                    <button type="button" class="btn btn-primary"> Go </button>
+                    <button type="button" onclick="loadSavedRound()" class="btn btn-primary">Load</button>
+                </div>
+                <h3>Start a New Round:</h3>
+                <div class="input-group">
+                    <select class="form-control" name="recordRoundSelect" id="recordRoundSelect">
+                    </select>
+                    <button type="button" onclick="generateRoundSheetFromSelect()" class="btn btn-primary"> Go </button>
                 </div>
             </div>
-            <div>
-                <h3 id="roundTitle"></h3>
-                <h4>Current Score</h4>
-                <table>
+            <div class="card p-3" id="roundSheet" style="display:none;">
 
-                </table>
-                <form id="scoreEntry">
-                    <div class="input-group d-flex flex-nowrap">
-                        <input class="form-control" type="text">
-                        <input class="form-control" type="text">
-                        <input class="form-control" type="number">
-                        <input class="form-control" type="number">
-                        <input class="form-control" type="number">
-                        <input class="form-control" type="number">
-                        <button type="button" class="btn btn-primary w-25"> + </button>
-                    </div>
-                </form>
             </div>
         </div>
 
@@ -52,7 +46,7 @@
 
 
         <!-- Sights Card -->
-        <div id="sightMarks">
+        <div id="sightMarks" style="display: none;">
             <br>
             <div id="newSightMark" class="card p-3">
                 <h3>Add a New Sight Mark</h3>
@@ -72,7 +66,6 @@
                             <tr>
                                 <th scope="col">Distance</th>
                                 <th scope="col">Sight Mark</th>
-                                <th scope="col">Date</th>
                             </tr>
                         </thead>
                         <tbody id="sightMarkTable">
@@ -83,11 +76,25 @@
             <br>
             <div id="individualSightMarks" class="card p-3">
                 <h3>All Sight Marks</h3>
+                <select class="form-control" name="viewSightMarksSelect" id="viewSightMarksSelect"
+                    onchange="populateIndividualMarks()">
+                </select>
                 <div id="individualMarks">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th scope="col">Distance</th>
+                                <th scope="col">Sight Mark</th>
+                                <th scope="col">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="individualSightMarkTable">
+                        </tbody>
+                    </table>
                 </div>
             </div>
             <!-- Stats Card -->
-            <div id="stats">
+            <div id="stats" style="display: none;">
                 <h3>stats</h3>
             </div>
         </div>
@@ -95,7 +102,7 @@
 
     <!-- Footer -->
     <div class="btn-group w-100" style="height:5vh;">
-        <button type="button" onclick="showCard('recordRound')" class="btn btn-light">Record A Round</button>
+        <button type="button" onclick="recordRound()" class="btn btn-light">Record A Round</button>
 
         <button type="button" onclick="showCard('sightMarks')" class="btn btn-light">Sight Marks</button>
 
