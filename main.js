@@ -286,7 +286,7 @@ function totalise(id) {
         if (val > 0) {
             hits++
         }
-        if (val > 9) {
+        if (val >= 9) {
             golds++
         }
     }
@@ -405,8 +405,8 @@ function submitScore() {
     }
     wipe("#roundSheet")
     hide("#roundSheet")
-    loadRoundStats(score.id)
-    showCard("stats")
+    /*loadRoundStats(score.id)
+    showCard("stats")*/
 }
 
 async function populateSavedRounds() {
@@ -456,4 +456,62 @@ function show(id) {
 
 function wipe(id) {
     document.querySelector(id).innerHTML = "";
+}
+
+async function loadRoundStats(id) {
+
+    let scores = await db.scores.where("id").equals(parseInt(id)).toArray();
+    let score = scores[0];
+    let stats = document.querySelector("#statsRound");
+
+    //Add Heading for round name
+
+    //Add date
+
+    let table = document.createElement("table");
+
+    stats.appendChild(table);
+    table.appendChild(scoreTableHeader(score.arrowsPerEnd))
+
+
+    showCard("stats");
+
+
+
+}
+
+function scoreTableHeader(arrowsPerEnd) {
+    let thead = document.createElement("thead");
+    let tr = document.createElement("tr");
+    thead.appendChild(tr);
+
+    let endLabel = document.createElement("td");
+    tr.appendChild(endLabel);
+    for (i = 0; i < arrowsPerEnd; i++) {
+        let td = document.createElement("td");
+        td.innerHTML = (i + 1).toString();
+        tr.appendChild(td);
+    }
+
+    let hits = document.createElement("td");
+    hits.innerHTML = "Hits";
+    tr.appendChild(hits);
+
+    let exes = document.createElement("td");
+    exes.innerHTML = "Xs";
+    tr.appendChild(exes);
+
+    let golds = document.createElement("td");
+    golds.innerHTML = "Golds";
+    tr.appendChild(golds);
+
+    let tot = document.createElement("td");
+    tot.innerHTML = "Total";
+    tr.appendChild(tot);
+
+    let running = document.createElement("td");
+    running.innerHTML = "Running";
+    tr.appendChild(running);
+
+    return thead
 }
