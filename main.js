@@ -14,6 +14,7 @@ db.version(2).stores({
 
 $(document).ready(async function () {
     await parseRounds()
+    populateScoreSheets()
     populateSavedRounds()
     populateSightMarkSelect()
     populateRecordRoundSelect()
@@ -161,6 +162,7 @@ function generateRoundSheetFromSelect() {
     generateRoundSheet(round);
 
 }
+
 function generateRoundSheet(inputRound) {
     hide("#loadingCard")
     console.log(inputRound);
@@ -183,6 +185,13 @@ function generateRoundSheet(inputRound) {
     id.id = "roundID";
     parent.appendChild(id);
 
+    let note = document.createElement("input");
+    note.classList.add("form-control");
+    note.id = "recordNote";
+    note.type = "text";
+    note.placeholder = "Event Name / Note"
+    parent.appendChild(note);
+    parent.appendChild(breakRow())
 
     for (pass of round.passes) {
         n_ends = pass.n_arrows / end_arrows;
@@ -387,6 +396,10 @@ function genScore() {
         scores.push(element.value ?? "");
     }
     newScore.scores = scores;
+
+    let noteElement = document.querySelector("#recordNote");
+    newScore.note = noteElement.value;
+
     return newScore;
     //get all inputs within elements within end_x for each end
 }
@@ -419,6 +432,16 @@ async function populateSavedRounds() {
     }
 }
 
+async function populateScoreSheets() {
+    let ele = document.querySelector("#scoreSheetSelect");
+    ele.innerHTML = "";
+    let savedRounds = await db.scores.where("final").equals(1).toArray();
+    console.log(savedRounds);
+    for (round of savedRounds) {
+        ele.appendChild(selectOption(round.id, (round.round + " - " + round.date)));
+    }
+}
+
 async function loadSavedRound() {
     let select = document.querySelector("#loadRoundSelect");
     let savedID = parseInt(select.value);
@@ -434,6 +457,8 @@ async function loadSavedRound() {
     for (i = 0; i < scoreInputs.length; i++) {
         scoreInputs[i].value = scores.scores[i];
     }
+    let noteInput = document.querySelector("#recordNote");
+    noteInput.value = scores.note;
 
 
 
@@ -472,6 +497,8 @@ async function loadRoundStats(id) {
 
     stats.appendChild(table);
     table.appendChild(scoreTableHeader(score.arrowsPerEnd))
+
+
 
 
     showCard("stats");
@@ -515,3 +542,253 @@ function scoreTableHeader(arrowsPerEnd) {
 
     return thead
 }
+
+async function loadScoreSheet() {
+
+    let id = parseInt(document.querySelector("#scoreSheetSelect").value);
+
+    let rounds = await db.scores.where("id").equals(id).toArray();
+    let round = rounds[0];
+
+    let statsCard = document.querySelector("#statsRound");
+    statsCard.innerHTML = "";
+
+
+    let h6 = document.createElement("h6")
+    h6.innerHTML = round.round + " - " + round.date;
+    statsCard.appendChild(h6);
+
+    let note = (round.note == undefined) ? "" : round.note;
+
+    let p = document.createElement("p")
+    p.innerHTML = note;
+    statsCard.appendChild(p);
+
+    statsCard.appendChild(scorecard(round));
+
+
+
+}
+
+
+function scorecard(score) {
+    let scores = score.scores
+    let arrowsPerEnd = score.arrowsPerEnd
+    let ends = score.ends
+
+    let date = score.date
+    let id = score.id
+    let round = getRoundByName(score.round)[0];
+    console.log(round)
+    let passes = round.passes;
+    console.log(passes);
+
+    let div = document.createElement("div");
+
+    let table = document.createElement("table")
+    table.classList.add("table")
+    table.classList.add("table-sm")
+    table.classList.add("table-borderd")
+    table.style.fontSize = "x-small"
+
+    div.appendChild(table);
+
+
+
+    let thead = document.createElement("thead");
+    table.appendChild(thead);
+
+    let trhead = document.createElement("tr");
+    thead.appendChild(trhead);
+
+    let cols = ["", "ET", "", "ET", "H", "X", "G", "Score", "RT"]
+
+    for (col of cols) {
+        let th = document.createElement("th");
+        th.innerHTML = col;
+        th.scope = "col";
+
+        trhead.appendChild(th);
+    }
+
+    let tbody = document.createElement("tbody")
+    table.appendChild(tbody);
+
+    let scoreRows = (scores.length / arrowsPerEnd) / 2;
+    console.log(scoreRows);
+    let scoreTotal = 0;
+    let xTotal = 0;
+    let hitTotal = 0;
+    let goldTotal = 0;
+    let a = 0; // Score index
+    for (pass of passes) {
+
+        let prow = document.createElement("tr");
+        let td = document.createElement("td")
+        td.innerHTML = pass.distance + pass.dist_unit;
+        prow.appendChild(td);
+        tbody.append(prow);
+
+        // Each table row
+        for (i = 0; i < pass.n_arrows / (arrowsPerEnd * 2); i++) {
+            let scoretr = document.createElement("tr");
+            let rowt = 0;
+            let rowX = 0;
+            let rowGolds = 0;
+            let rowHits = 0;
+
+
+
+            //Each End
+            for (j = 0; j < 2; j++) {
+                let endt = 0;
+                let endstr = "";
+
+                // Each score
+                for (k = 0; k < arrowsPerEnd; k++) {
+
+
+                    // padding between score entries
+                    if (endstr != "") {
+                        endstr += " ";
+                    }
+
+                    //Arrow score
+                    let val = scores[a]
+
+
+                    //10 if it's an X - TODO can 9s count as X ?
+                    switch (val) {
+                        case "x":
+                        case "X":
+                            rowX++
+                            xTotal++
+                            val = 10
+                            break;
+                        // 0 if it's an m or M - Could use toUpper oh well
+                        case "m":
+                        case "M":
+                            val = 0
+                            break;
+                    }
+                    //Add to end Total
+                    endt += parseInt(val == "" ? 0 : val)
+                    //Add to row Total
+                    rowt += parseInt(val == "" ? 0 : val)
+
+                    if (val > 0) {
+                        rowHits++
+                        hitTotal++
+                    }
+                    if (val >= 9) {
+                        rowGolds++
+                        goldTotal++
+                    }
+                    console.log(a)
+                    console.log(val)
+
+                    endstr += scores[a].toUpperCase();
+                    scoreTotal += parseInt(val);
+
+                    // Update score index
+                    a++
+
+
+
+
+                }
+                for (each of [endstr, endt]) {
+                    let td = document.createElement("td");
+                    td.innerHTML = each;
+                    scoretr.appendChild(td);
+                }
+
+
+            }
+
+            //After two ends have processed
+            for (each of [rowHits, rowX, rowGolds, rowt, scoreTotal]) {
+                let td = document.createElement("td");
+                td.innerHTML = each;
+                scoretr.appendChild(td);
+            }
+
+            tbody.appendChild(scoretr);
+        }
+
+
+
+
+
+    }
+
+    //Add final scores
+
+    let totals = [{ tag: "Total Hits: ", value: hitTotal },
+    { tag: "Total Xs: ", value: xTotal },
+    { tag: "Total Golds: ", value: goldTotal }]
+
+    let pstring = ""
+
+    for (total of totals) {
+        pstring = total.tag + total.value;
+
+        let p = document.createElement("div");
+
+        p.innerHTML = pstring;
+        div.appendChild(p)
+    }
+
+
+
+    let h6 = document.createElement("h6");
+    h6.innerHTML = "Final Score : " + scoreTotal;
+    div.appendChild(h6);
+
+
+    return div;
+
+
+
+
+
+}
+//Create scorecard assuming score from array.
+
+
+
+/*
+
+                    <table class="table table-sm table-bordered" style="font-size: xx-small;">
+                        <h6 id="scorecardTitle">Warwick 10/04/2024</h6>
+                        <p id="font-size: small;">Tom Bosher Personal Round</p>
+                        <thead>
+                            <tr>
+                                <th scope="col"></th>
+                                <th scope="col">E/T</th>
+                                <th scope="col"></th>
+                                <th scope="col">E/T</th>
+                                <th scope="col">H</th>
+                                <th scope="col">X</th>
+                                <th scope="col">G</th>
+                                <th scope="col">Score</th>
+                                <th scope="col">R/T</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>10 10 10 10 10 10</td>
+                                <td>54</td>
+                                <td>10 10 10 10 10 10</td>
+                                <td>54</td>
+                                <td>12</td>
+                                <td>12</td>
+                                <td>12</td>
+                                <td>108</td>
+                                <td>108</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+*/
+
