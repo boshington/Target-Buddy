@@ -6,3 +6,5 @@
 # Add dropdown for round type and add all round types
 # Totalise Rounds automatically when loading a saved round
 # Add note field to scorecard to allow people to enter a note on e.g. club events
+
+# Don't allow Xs to be entered for Imperial Rounds
