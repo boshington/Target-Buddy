@@ -310,6 +310,7 @@ function totalise(id) {
 function scoreInput(id) {
     let ele = document.createElement("input")
     ele.classList.add("form-control")
+    ele.classList.add("arrowEntry")
     ele.type = "text"
     ele.id = id
     ele.maxLength = "2"
@@ -390,7 +391,7 @@ function genScore() {
         final: 0,
         date: datestamp,
     }
-    let scoreElements = document.querySelectorAll("#roundSheet input");
+    let scoreElements = document.querySelectorAll(".arrowEntry");
     let scores = []
     for (element of scoreElements) {
         scores.push(element.value ?? "");
@@ -407,6 +408,8 @@ function genScore() {
 
 function saveScore() {
     db.scores.put(genScore());
+    populateSavedRounds();
+    populateScoreSheets();
 }
 
 function submitScore() {
@@ -416,6 +419,8 @@ function submitScore() {
         score.final = 1;
         db.scores.put(score);
     }
+    populateSavedRounds();
+    populateScoreSheets();
     wipe("#roundSheet")
     hide("#roundSheet")
     /*loadRoundStats(score.id)
@@ -453,7 +458,7 @@ async function loadSavedRound() {
     n_ends = scores.ends;
     roundID = scores.id;
     document.querySelector("#roundID").innerHTML = roundID;
-    let scoreInputs = document.querySelectorAll("#roundSheet input");
+    let scoreInputs = document.querySelectorAll(".arrowEntry");
     for (i = 0; i < scoreInputs.length; i++) {
         scoreInputs[i].value = scores.scores[i];
     }
@@ -655,6 +660,9 @@ function scorecard(score) {
 
                     //Arrow score
                     let val = scores[a]
+                    if (val == score.note) {
+                        a++
+                    }
 
 
                     //10 if it's an X - TODO can 9s count as X ?
