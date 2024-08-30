@@ -7,7 +7,9 @@
 # Totalise Rounds automatically when loading a saved round
 # Add note field to scorecard to allow people to enter a note on e.g. club events
 
-# Don't allow Xs to be entered for Imperial Rounds
+# Don't allow Xs to be entered for Imperial Rounds - or score them appropriately
 # Add delete buttons to scorecard view
+# Add better keyboard
 
 # Actually test
+# Remove misses

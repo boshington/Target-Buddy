@@ -660,8 +660,11 @@ function scorecard(score) {
 
                     //Arrow score
                     let val = scores[a]
+
+                    //Edge case if note got stored as a score prior to bugfix
                     if (val == score.note) {
                         a++
+                        val = scores[a]
                     }
 
 
