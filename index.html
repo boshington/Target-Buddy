@@ -32,6 +32,9 @@
                 </div>
                 <h3>Start a New Round:</h3>
                 <div class="input-group">
+                    <select class="form-control" name="recordRoundTypeSelect" id="recordRoundTypeSelect"
+                        onchange="populateRecordRoundSelect()">
+                    </select>
                     <select class="form-control" name="recordRoundSelect" id="recordRoundSelect">
                     </select>
                     <button type="button" onclick="generateRoundSheetFromSelect()" class="btn btn-primary"> Go </button>

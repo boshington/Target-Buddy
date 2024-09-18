@@ -1,7 +1,9 @@
 metricDistances = ["30m", "40m", "50m", "60m"];
 imperialDistances = ["20yd", "30yd", "40yd", "50yd", "60yd", "70yd", "80yd", "90yd", "100yd", "110yd"];
 //const agbOutdoorImperial = require("res/AGB_outdoor_imperial.json");
-var agbOutdoorImperial, agbOutdoorMetric, allRounds, roundName;
+var agbOutdoorImperial, agbOutdoorMetric, roundName;
+var allRounds = []
+var roundTypes = []
 
 var end_arrows, roundID, n_ends;
 
@@ -17,6 +19,7 @@ $(document).ready(async function () {
     populateScoreSheets()
     populateSavedRounds()
     populateSightMarkSelect()
+    populateRecordRoundTypeSelect()
     populateRecordRoundSelect()
     populateSightMarkTable()
     populateIndividualMarks()
@@ -25,9 +28,66 @@ $(document).ready(async function () {
 });
 
 async function parseRounds() {
-    agbOutdoorImperial = await $.getJSON("res/AGB_outdoor_imperial.json");
-    agbOutdoorMetric = await $.getJSON("res/AGB_outdoor_metric.json");
-    allRounds = agbOutdoorImperial.concat(agbOutdoorMetric);
+    roundTypes = [
+        {
+            title: "AGB Outdoor Imperial",
+            content: await $.getJSON("res/AGB_outdoor_imperial.json")
+        },
+        {
+            title: "AGB Outdoor Metric",
+            content: await $.getJSON("res/AGB_outdoor_metric.json")
+        },
+        {
+            title: "AGB Indoor",
+            content: await $.getJSON("res/AGB_indoor.json"),
+        },
+        {
+            title: "AGB VI",
+            content: await $.getJSON("res/AGB_VI.json")
+        },
+        {
+            title: "IFAA Field",
+            content: await $.getJSON("res/IFAA_field.json")
+        },
+        {
+            title: "Miscellaneous",
+            content: await $.getJSON("res/Miscellaneous.json")
+        },
+        {
+            title: "WA Field",
+            content: await $.getJSON("res/WA_field.json")
+        },
+        {
+            title: "WA Indoor",
+            content: await $.getJSON("res/WA_indoor.json")
+        },
+        {
+            title: "WA Outdoor",
+            content: await $.getJSON("res/WA_outdoor.json")
+        },
+        {
+            title: "WA VI",
+            content: await $.getJSON("res/WA_VI.json")
+        }
+
+    ];
+    for (var round of roundTypes) {
+        allRounds = allRounds.concat(round.content)
+    }
+
+}
+
+function getTypeRounds() {
+    let type = document.querySelector("#recordRoundTypeSelect").value;
+    console.log(type)
+
+    let obj = roundTypes.filter(
+        function (data) { return data.title == type }
+    );
+
+    console.log(obj)
+
+    return obj[0].content
 }
 
 function recordRound() {
@@ -54,11 +114,23 @@ function populateSightMarkSelect() {
 
 //Generate Record Table Based on recordRoundSelect
 function populateRecordRoundSelect() {
-    for (round of allRounds) {
+    document.querySelector("#recordRoundSelect").innerHTML = ""
+    let rounds = getTypeRounds()
+    console.log(rounds)
+    for (round of rounds) {
         newElement = document.createElement("option");
         newElement.value = round.name;
         newElement.innerHTML = round.name;
         document.querySelector("#recordRoundSelect").appendChild(newElement);
+    }
+}
+
+function populateRecordRoundTypeSelect() {
+    for (type of roundTypes) {
+        newElement = document.createElement("option");
+        newElement.value = type.title;
+        newElement.innerHTML = type.title;
+        document.querySelector("#recordRoundTypeSelect").appendChild(newElement);
     }
 }
 
