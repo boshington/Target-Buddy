@@ -5,4 +5,6 @@ It also has a sight mark tab which allows you to submit your sight marks and vie
 
 I really just developed this to help myself out during rounds, but I plan to release it as a free app when it is ready. 
 
-This PWA utilises agb round information contained in archeryutils maintained by jatkinson1000
+#Thank You
+This PWA utilises round information contained in archeryutils, maintained by jatkinson1000 and other contributors. 
+Huge thank you to this project for making all of the round data available easily
