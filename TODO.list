@@ -13,3 +13,6 @@
 
 # Actually test
 # Remove misses
+
+
+#There is an issue with rounds that have an odd number of ends in a pass. 5 ends at one distance will appear as 6 ends as the logic is paper thin and scorecards don't work :) 

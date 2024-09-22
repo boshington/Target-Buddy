@@ -23,7 +23,8 @@ $(document).ready(async function () {
     populateRecordRoundSelect()
     populateSightMarkTable()
     populateIndividualMarks()
-    showCard("recordRound")
+    showCard("stats")
+    loadScoreSheet()
 
 });
 
@@ -295,7 +296,7 @@ function generateRoundSheet(inputRound) {
             let row2 = newRow();
 
 
-            for (field of ["a_hits", "a_miss", "a_golds", "a_x", "a_total"]) {
+            for (field of ["a_hits", "a_golds", "a_x", "a_total"]) {
                 row2.appendChild(scoreInfo(endID + "_" + field));
             }
 
@@ -336,14 +337,12 @@ function totalise(id) {
     let ele_hits = document.querySelector(id + "_a_hits");
     let ele_golds = document.querySelector(id + "_a_golds");
     let ele_total = document.querySelector(id + "_a_total");
-    let ele_miss = document.querySelector(id + "_a_miss");
     let ele_exes = document.querySelector(id + "_a_x");
 
     let total = 0;
     let hits = 0;
     let golds = 0;
     let exes = 0;
-    let misses = 0;
 
     for (i = 0; i < end_arrows; i++) {
         let arrow = i + 1;
@@ -358,7 +357,6 @@ function totalise(id) {
                 break;
             case "m":
             case "M":
-                misses++
                 val = 0
                 break;
         }
@@ -374,7 +372,6 @@ function totalise(id) {
     ele_hits.innerHTML = "Hits<br>" + hits;
     ele_golds.innerHTML = "Golds<br>" + golds;
     ele_total.innerHTML = "Total<br>" + total;
-    ele_miss.innerHTML = "Misses<br>" + misses;
     ele_exes.innerHTML = "Xs<br>" + exes;
 
 }
@@ -624,6 +621,8 @@ async function loadScoreSheet() {
 
     let id = parseInt(document.querySelector("#scoreSheetSelect").value);
 
+    //let id = 1726663525520
+
     let rounds = await db.scores.where("id").equals(id).toArray();
     let round = rounds[0];
 
@@ -661,6 +660,7 @@ function scorecard(score) {
     console.log(passes);
 
     let div = document.createElement("div");
+    console.log(score)
 
     let table = document.createElement("table")
     table.classList.add("table")
@@ -684,149 +684,66 @@ function scorecard(score) {
         let th = document.createElement("th");
         th.innerHTML = col;
         th.scope = "col";
-
         trhead.appendChild(th);
     }
 
     let tbody = document.createElement("tbody")
     table.appendChild(tbody);
 
-    let scoreRows = (scores.length / arrowsPerEnd) / 2;
-    console.log(scoreRows);
-    let scoreTotal = 0;
-    let xTotal = 0;
-    let hitTotal = 0;
-    let goldTotal = 0;
-    let a = 0; // Score index
+    let ai = 0; //arrow_iter
+    let scoreSections = []
+
+    //Allocate scores to passes
     for (pass of passes) {
-
-        let prow = document.createElement("tr");
-        let td = document.createElement("td")
-        td.innerHTML = pass.distance + pass.dist_unit;
-        prow.appendChild(td);
-        tbody.append(prow);
-
-        // Each table row
-        for (i = 0; i < pass.n_arrows / (arrowsPerEnd * 2); i++) {
-            let scoretr = document.createElement("tr");
-            let rowt = 0;
-            let rowX = 0;
-            let rowGolds = 0;
-            let rowHits = 0;
-
-
-
-            //Each End
-            for (j = 0; j < 2; j++) {
-                let endt = 0;
-                let endstr = "";
-
-                // Each score
-                for (k = 0; k < arrowsPerEnd; k++) {
-
-
-                    // padding between score entries
-                    if (endstr != "") {
-                        endstr += " ";
-                    }
-
-                    //Arrow score
-                    let val = scores[a]
-
-                    //Edge case if note got stored as a score prior to bugfix
-                    if (val == score.note) {
-                        a++
-                        val = scores[a]
-                    }
-
-
-                    //10 if it's an X - TODO can 9s count as X ?
-                    switch (val) {
-                        case "x":
-                        case "X":
-                            rowX++
-                            xTotal++
-                            val = 10
-                            break;
-                        // 0 if it's an m or M - Could use toUpper oh well
-                        case "m":
-                        case "M":
-                            val = 0
-                            break;
-                    }
-                    //Add to end Total
-                    endt += parseInt(val == "" ? 0 : val)
-                    //Add to row Total
-                    rowt += parseInt(val == "" ? 0 : val)
-
-                    if (val > 0) {
-                        rowHits++
-                        hitTotal++
-                    }
-                    if (val >= 9) {
-                        rowGolds++
-                        goldTotal++
-                    }
-                    console.log(a)
-                    console.log(val)
-
-                    endstr += scores[a].toUpperCase();
-                    scoreTotal += parseInt(val);
-
-                    // Update score index
-                    a++
-
-
-
-
-                }
-                for (each of [endstr, endt]) {
-                    let td = document.createElement("td");
-                    td.innerHTML = each;
-                    scoretr.appendChild(td);
-                }
-
-
-            }
-
-            //After two ends have processed
-            for (each of [rowHits, rowX, rowGolds, rowt, scoreTotal]) {
-                let td = document.createElement("td");
-                td.innerHTML = each;
-                scoretr.appendChild(td);
-            }
-
-            tbody.appendChild(scoretr);
+        pass.scores = []
+        for (i = 0; i < pass.n_arrows; i++) {
+            pass.scores.push(scores[ai])
+            ai++
         }
-
-
-
-
-
     }
+    console.log(passes) //debug
 
-    //Add final scores
-
-    let totals = [{ tag: "Total Hits: ", value: hitTotal },
-    { tag: "Total Xs: ", value: xTotal },
-    { tag: "Total Golds: ", value: goldTotal }]
-
-    let pstring = ""
-
-    for (total of totals) {
-        pstring = total.tag + total.value;
-
-        let p = document.createElement("div");
-
-        p.innerHTML = pstring;
-        div.appendChild(p)
+    for (pass of passes) {
+        //For each pass create a scoresheet section
+        let ends = parseEnds(pass.scores)
+        console.log(ends)
+        let rt = 0;
+        for (end of ends) {
+            let ele = document.createElement("td");
+            end.hits = countArray(["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "X"], end)
+            end.exes = countArray(["X"], end);
+            end.golds = countArray(["X", "9", "10"], end);
+            end.total = sumEnd(end);
+            console.log(end);
+        }
     }
+    console.log(round);
 
 
 
-    let h6 = document.createElement("h6");
-    h6.innerHTML = "Final Score : " + scoreTotal;
-    div.appendChild(h6);
+
+
+
+
+    // Establish if two distances are the same and combine into passes of the right size
+    // For pass in pass
+    // N_ends = arrows/6 
+    // N-scoresheet rows 
+    // for end:
+    // Create slice of scores
+    // for scoresheet row:
+    // Create end score
+    // if(slice isn't empty) create end score otherwise create empty score
+
+
+
+    // Alternatively
+    // Create a scorecard object
+    // Create an object for each pass containing scorecard row objects, containing end objects
+    // Append 
+
+
+
 
 
     return div;
@@ -875,3 +792,37 @@ function scorecard(score) {
 
 */
 
+function parseEnds(array) {
+    let tm = array;
+    let result = []
+    while (tm.length > 0) {
+        result.push(tm.splice(0, 6))
+    }
+    return result;
+}
+
+function countArray(vals, array) {
+    let result = 0;
+    for (ar of array) {
+        if (ar.toString().toUpperCase() in vals) {
+            result++
+        }
+    }
+    return result
+}
+
+function sumEnd(array) {
+    let result = 0;
+    for (score of end) {
+        if (score == "") {
+            result += 0
+        } else if (score.toString().toUpperCase() == "X") {
+            result += 10
+        } else if (score.toString().toUpperCase() == "M") {
+            result += 0
+        } else {
+            result += parseInt(score)
+        }
+    }
+    return result;
+}
