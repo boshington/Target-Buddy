@@ -266,6 +266,34 @@ function generateRoundSheet(inputRound) {
     parent.appendChild(note);
     parent.appendChild(breakRow())
 
+    note.addEventListener("change", function () {
+        saveScore()
+    })
+
+    let archer = document.createElement("input");
+    archer.classList.add("form-control");
+    archer.id = "recordArcher";
+    archer.type = "text";
+    archer.placeholder = "Archer Name"
+    parent.appendChild(archer);
+    parent.appendChild(breakRow())
+
+    archer.addEventListener("change", function () {
+        saveScore()
+    })
+
+
+    let date = document.createElement("input");
+    date.classList.add("form-control");
+    date.id = "recordDate";
+    date.type = "date";
+    parent.appendChild(date);
+    parent.appendChild(breakRow())
+
+    date.addEventListener("change", function () {
+        saveScore()
+    })
+
     for (pass of round.passes) {
         n_ends = pass.n_arrows / end_arrows;
         console.log(n_ends);
@@ -286,15 +314,18 @@ function generateRoundSheet(inputRound) {
 
 
 
-            let row = newRow();
+            let row = document.createElement("div");
+            row.classList.add("d-flex")
+            row.classList.add("flex-nowrap")
 
 
             for (let j = 0; j < end_arrows; j++) {
                 row.appendChild(scoreInput(endID + "_a_" + (j + 1)));
             }
 
-            let row2 = newRow();
-
+            let row2 = document.createElement("div");
+            row2.classList.add("d-flex")
+            row2.classList.add("flex-nowrap")
 
             for (field of ["a_hits", "a_golds", "a_x", "a_total"]) {
                 row2.appendChild(scoreInfo(endID + "_" + field));
@@ -325,13 +356,7 @@ function generateRoundSheet(inputRound) {
 //Get total field totalise(end_1)
 //a_tot child of end_1 
 //get 
-function newRow() {
-    let row = document.createElement("div");
-    row.classList.add("d-flex")
-    row.classList.add("flex-nowrap")
 
-    return row
-}
 function totalise(id) {
     let parent = document.querySelector(id)
     let ele_hits = document.querySelector(id + "_a_hits");
@@ -470,6 +495,12 @@ function genScore() {
     let noteElement = document.querySelector("#recordNote");
     newScore.note = noteElement.value;
 
+    let archerElement = document.querySelector("#recordArcher");
+    newScore.archer = archerElement.value;
+
+    let dateElement = document.querySelector("#recordDate");
+    newScore.date = dateElement.value;
+
     return newScore;
     //get all inputs within elements within end_x for each end
 }
@@ -483,11 +514,12 @@ function saveScore() {
 
 function submitScore() {
     let atext = "This will finalise your score, are you sure?";
-    if (confirm(atext)) {
-        score = genScore();
-        score.final = 1;
-        db.scores.put(score);
+    if (!confirm(atext)) {
+        return
     }
+    score = genScore();
+    score.final = 1;
+    db.scores.put(score);
     populateSavedRounds();
     populateScoreSheets();
     wipe("#roundSheet")
@@ -533,6 +565,14 @@ async function loadSavedRound() {
     }
     let noteInput = document.querySelector("#recordNote");
     noteInput.value = scores.note;
+
+    let dateInput = document.querySelector("#recordDate");
+    dateInput.value = scores.date;
+
+    let archerInput = document.querySelector("#recordArcher");
+    archerInput.value = scores.archer;
+
+
 
 
 
@@ -626,19 +666,27 @@ async function loadScoreSheet() {
     let rounds = await db.scores.where("id").equals(id).toArray();
     let round = rounds[0];
 
+    //Clear existing shown scorecard
+
     let statsCard = document.querySelector("#statsRound");
     statsCard.innerHTML = "";
 
-
+//Heading with round and date
     let h6 = document.createElement("h6")
     h6.innerHTML = round.round + " - " + round.date;
     statsCard.appendChild(h6);
 
+    //Text with note / event name and archer 
     let note = (round.note == undefined) ? "" : round.note;
+    let archer = (round.archer == undefined) ? "" : round.archer;
 
     let p = document.createElement("p")
-    p.innerHTML = note;
+    p.innerHTML = "Note/Event: " + note + "<br>" + "Archer: " + archer;
     statsCard.appendChild(p);
+
+
+
+
 
     statsCard.appendChild(scorecard(round));
 
@@ -662,34 +710,6 @@ function scorecard(score) {
     let div = document.createElement("div");
     console.log(score)
 
-    let table = document.createElement("table")
-    table.classList.add("table")
-    table.classList.add("table-sm")
-    table.classList.add("table-borderd")
-    table.style.fontSize = "x-small"
-
-    div.appendChild(table);
-
-
-
-    let thead = document.createElement("thead");
-    table.appendChild(thead);
-
-    let trhead = document.createElement("tr");
-    thead.appendChild(trhead);
-
-    let cols = ["", "ET", "", "ET", "H", "X", "G", "Score", "RT"]
-
-    for (col of cols) {
-        let th = document.createElement("th");
-        th.innerHTML = col;
-        th.scope = "col";
-        trhead.appendChild(th);
-    }
-
-    let tbody = document.createElement("tbody")
-    table.appendChild(tbody);
-
     let ai = 0; //arrow_iter
     let scoreSections = []
 
@@ -703,60 +723,150 @@ function scorecard(score) {
     }
     console.log(passes) //debug
 
+    let rt = 0;
+
+    round.totals = new Object();
+    round.totals.hits = 0;
+    round.totals.exes = 0;
+    round.totals.golds = 0;
+    round.totals.total = 0;
+
     for (pass of passes) {
         //For each pass create a scoresheet section
         let ends = parseEnds(pass.scores)
+        let newends = []
         console.log(ends)
-        let rt = 0;
+
         for (end of ends) {
-            let ele = document.createElement("td");
-            end.hits = countArray(["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "X"], end)
-            end.exes = countArray(["X"], end);
-            end.golds = countArray(["X", "9", "10"], end);
-            end.total = sumEnd(end);
+            let newend = new Object;
+            newend.scores = end
+            newend.hits = countArray(["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "X"], end)
+            newend.exes = countArray(["X"], end);
+            newend.golds = countArray(["X", "9", "10"], end);
+            newend.total = sumEnd(end);
+            rt += newend.total
+            newend.rtotal = rt
             console.log(end);
+            newends.push(newend);
+
+            round.totals.hits += newend.hits
+            round.totals.exes += newend.exes
+            round.totals.golds += newend.golds
+            round.totals.total += newend.total
+
         }
+        pass.ends = newends;
     }
     console.log(round);
 
 
 
 
+    //tbody is tbody
+    for (pass of passes) {
 
 
+        //create label for distance
+        div.appendChild(subTitle(pass.distance + pass.dist_unit))
 
-    // Establish if two distances are the same and combine into passes of the right size
-    // For pass in pass
-    // N_ends = arrows/6 
-    // N-scoresheet rows 
-    // for end:
-    // Create slice of scores
-    // for scoresheet row:
-    // Create end score
-    // if(slice isn't empty) create end score otherwise create empty score
+        //aesthetic line break
+        div.appendChild(document.createElement("br"))
 
+        //create new scoretable
+        let ptable = borderedTable();
+        div.appendChild(ptable)
 
+        //Do headings
+        let hrow = newRow()
+        ptable.appendChild(hrow);
 
-    // Alternatively
-    // Create a scorecard object
-    // Create an object for each pass containing scorecard row objects, containing end objects
-    // Append 
+        //Add heading row to table
+        let headings = ["Arrows", "H", "X", "G", "ET", "RT"]
+        for (heading of headings) {
+            text = textItem(heading)
+            text.classList.add("fw-semibold");
+            hrow.appendChild(text);
+        }
 
+        //For each end, add a new row and populate with the data stored in round.ends[n]
+        for (end of pass.ends) {
+            let endRow = newRow()
+            ptable.appendChild(endRow)
+            for (item in end) {
+                console.log(item)
+                endRow.appendChild(textItem(end[item]));
+            }
+        }
+    }
+
+    //Scoresheet totals
+    div.appendChild(subTitle("Totals"))
+
+    //Aesthetic break
+    div.appendChild(document.createElement("br"))
+
+    //Add totals table
+    let ttable = borderedTable();
+    div.appendChild(ttable)
+
+    //Heading Row
+    let hrow = newRow()
+    ttable.appendChild(hrow);
+
+    //Headings
+    let headings = ["Hits", "Xs", "Golds", "Total Score"]
+    for (heading of headings) {
+        text = textItem(heading)
+        text.classList.add("fw-semibold");
+        hrow.appendChild(text);
+    }
+
+    //Totals Row
+    let trow = newRow()
+    ttable.appendChild(trow)
+
+    //Totals
+    for (total in round.totals) {
+        text = textItem(round.totals[total])
+        trow.appendChild(text)
+    }
 
 
 
 
     return div;
+}
 
 
-
-
-
+function subTitle(text) {
+    let st = document.createElement("tr")
+    st.innerHTML = text
+    st.classList.add("text-center")
+    //distLabelRow.style.textDecoration = "underline"
+    return st
 }
 //Create scorecard assuming score from array.
 
+function textItem(text) {
+    item = document.createElement("td");
+    item.innerHTML = text;
 
+    item.classList.add("text-center")
+    return item;
+}
 
+function newRow() {
+    item = document.createElement("tr");
+
+    return item;
+}
+
+function borderedTable() {
+    let table = document.createElement("table")
+    table.classList.add("table")
+    table.classList.add("table-bordered")
+    return table
+}
 /*
 
                     <table class="table table-sm table-bordered" style="font-size: xx-small;">
