@@ -4,8 +4,9 @@ imperialDistances = ["20yd", "30yd", "40yd", "50yd", "60yd", "70yd", "80yd", "90
 var agbOutdoorImperial, agbOutdoorMetric, roundName;
 var allRounds = []
 var roundTypes = []
-
 var end_arrows, roundID, n_ends;
+var currentInput;
+var allInputs;
 
 const db = new Dexie("ArcheryBuddy");
 db.version(2).stores({
@@ -23,8 +24,7 @@ $(document).ready(async function () {
     populateRecordRoundSelect()
     populateSightMarkTable()
     populateIndividualMarks()
-    showCard("stats")
-    loadScoreSheet()
+    showCard("recordRound")
 
 });
 
@@ -201,6 +201,7 @@ async function populateIndividualMarks() {
 
 //Show/Hide Cards
 function showCard(cardName) {
+    hideKeypad()
     for (id of ["sightMarks", "recordRound", "stats"]) {
         let e = document.querySelector("#" + id);
         e.style.display = "none"
@@ -238,6 +239,7 @@ function generateRoundSheetFromSelect() {
 
 function generateRoundSheet(inputRound) {
     hide("#loadingCard")
+    
     console.log(inputRound);
     let round = getRoundByName(inputRound)[0];
     roundName = round.name;
@@ -351,6 +353,7 @@ function generateRoundSheet(inputRound) {
     parent.appendChild(submitButton());
 
     parent.style.display = "block";
+    initKeypad()
 }
 
 //Get total field totalise(end_1)
@@ -408,6 +411,10 @@ function scoreInput(id) {
     ele.type = "text"
     ele.id = id
     ele.maxLength = "2"
+    ele.readOnly = true
+    ele.addEventListener("click", function () {
+        currentInput = id
+    })
 
     return ele
 }
@@ -935,4 +942,47 @@ function sumEnd(array) {
         }
     }
     return result;
+}
+
+function setScore(val){
+    let ele = document.querySelector("#" + currentInput)
+    ele.value = val
+    var event = new Event('change');
+    ele.parentElement.dispatchEvent(event);
+    ele.focus()
+    nextInput()
+    focusInput()
+
+}
+
+function showKeypad(){
+    let keypad = document.querySelector("#keypad");
+    keypad.style.display = "block"
+}
+
+function hideKeypad(){
+    let keypad = document.querySelector("#keypad");
+    keypad.style.display = "none"
+}
+
+function initKeypad(){
+    showKeypad()
+    allInputs = []
+    allEles = document.querySelectorAll(".arrowEntry");
+    for(ele of allEles){
+        allInputs.push(ele.id);
+    }
+}
+
+function nextInput(){
+    currentInput = allInputs[allInputs.indexOf(currentInput)+1] ?? currentInput;
+}
+
+function previousInput(){
+    currentInput = allInputs[allInputs.indexOf(currentInput)-1] ?? currentInput;
+}
+
+function focusInput(){
+    let ele = document.querySelector("#" + currentInput)
+    ele.focus();
 }
