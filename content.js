@@ -1,3 +1,4 @@
+//Distances for sight marks
 metricDistances = ["30m", "40m", "50m", "60m"];
 imperialDistances = ["20yd", "30yd", "40yd", "50yd", "60yd", "70yd", "80yd", "90yd", "100yd", "110yd"];
 //const agbOutdoorImperial = require("res/AGB_outdoor_imperial.json");
@@ -239,7 +240,7 @@ function generateRoundSheetFromSelect() {
 
 function generateRoundSheet(inputRound) {
     hide("#loadingCard")
-    
+
     console.log(inputRound);
     let round = getRoundByName(inputRound)[0];
     roundName = round.name;
@@ -289,6 +290,7 @@ function generateRoundSheet(inputRound) {
     date.classList.add("form-control");
     date.id = "recordDate";
     date.type = "date";
+    date.valueAsDate = new Date()
     parent.appendChild(date);
     parent.appendChild(breakRow())
 
@@ -519,20 +521,20 @@ function saveScore() {
     populateScoreSheets();
 }
 
-function submitScore() {
+async function submitScore() {
     let atext = "This will finalise your score, are you sure?";
     if (!confirm(atext)) {
         return
     }
     score = genScore();
     score.final = 1;
-    db.scores.put(score);
+    await db.scores.put(score);
     populateSavedRounds();
     populateScoreSheets();
     wipe("#roundSheet")
     hide("#roundSheet")
-    /*loadRoundStats(score.id)
-    showCard("stats")*/
+    loadScoreSheet(score.id)
+    showCard("stats")
 }
 
 async function populateSavedRounds() {
@@ -604,30 +606,6 @@ function wipe(id) {
     document.querySelector(id).innerHTML = "";
 }
 
-async function loadRoundStats(id) {
-
-    let scores = await db.scores.where("id").equals(parseInt(id)).toArray();
-    let score = scores[0];
-    let stats = document.querySelector("#statsRound");
-
-    //Add Heading for round name
-
-    //Add date
-
-    let table = document.createElement("table");
-
-    stats.appendChild(table);
-    table.appendChild(scoreTableHeader(score.arrowsPerEnd))
-
-
-
-
-    showCard("stats");
-
-
-
-}
-
 function scoreTableHeader(arrowsPerEnd) {
     let thead = document.createElement("thead");
     let tr = document.createElement("tr");
@@ -664,9 +642,12 @@ function scoreTableHeader(arrowsPerEnd) {
     return thead
 }
 
-async function loadScoreSheet() {
+async function loadScoreSheet(id = "none") {
 
-    let id = parseInt(document.querySelector("#scoreSheetSelect").value);
+    if (id == "none") {
+
+        id = parseInt(document.querySelector("#scoreSheetSelect").value);
+    }
 
     //let id = 1726663525520
 
@@ -678,7 +659,7 @@ async function loadScoreSheet() {
     let statsCard = document.querySelector("#statsRound");
     statsCard.innerHTML = "";
 
-//Heading with round and date
+    //Heading with round and date
     let h6 = document.createElement("h6")
     h6.innerHTML = round.round + " - " + round.date;
     statsCard.appendChild(h6);
@@ -944,7 +925,7 @@ function sumEnd(array) {
     return result;
 }
 
-function setScore(val){
+function setScore(val) {
     let ele = document.querySelector("#" + currentInput)
     ele.value = val
     var event = new Event('change');
@@ -955,34 +936,34 @@ function setScore(val){
 
 }
 
-function showKeypad(){
+function showKeypad() {
     let keypad = document.querySelector("#keypad");
     keypad.style.display = "block"
 }
 
-function hideKeypad(){
+function hideKeypad() {
     let keypad = document.querySelector("#keypad");
     keypad.style.display = "none"
 }
 
-function initKeypad(){
+function initKeypad() {
     showKeypad()
     allInputs = []
     allEles = document.querySelectorAll(".arrowEntry");
-    for(ele of allEles){
+    for (ele of allEles) {
         allInputs.push(ele.id);
     }
 }
 
-function nextInput(){
-    currentInput = allInputs[allInputs.indexOf(currentInput)+1] ?? currentInput;
+function nextInput() {
+    currentInput = allInputs[allInputs.indexOf(currentInput) + 1] ?? currentInput;
 }
 
-function previousInput(){
-    currentInput = allInputs[allInputs.indexOf(currentInput)-1] ?? currentInput;
+function previousInput() {
+    currentInput = allInputs[allInputs.indexOf(currentInput) - 1] ?? currentInput;
 }
 
-function focusInput(){
+function focusInput() {
     let ele = document.querySelector("#" + currentInput)
     ele.focus();
 }
