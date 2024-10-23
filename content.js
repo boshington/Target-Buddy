@@ -8,6 +8,7 @@ var roundTypes = []
 var end_arrows, roundID, n_ends;
 var currentInput;
 var allInputs;
+var scoring;
 
 const db = new Dexie("ArcheryBuddy");
 db.version(2).stores({
@@ -243,6 +244,7 @@ function generateRoundSheet(inputRound) {
 
     console.log(inputRound);
     let round = getRoundByName(inputRound)[0];
+    scoring = round.passes[0].scoring;
     roundName = round.name;
     roundID = new Date().getTime();
     let parent = document.querySelector("#roundSheet");
@@ -395,9 +397,16 @@ function totalise(id) {
         if (val > 0) {
             hits++
         }
-        if (val >= 9) {
-            golds++
+        if (scoring.includes("5_zone")) {
+            if (val >= 9) {
+                golds++
+            }
+        } else {
+            if (val == 10) {
+                golds++
+            }
         }
+
     }
     ele_hits.innerHTML = "Hits<br>" + hits;
     ele_golds.innerHTML = "Golds<br>" + golds;
@@ -562,6 +571,8 @@ async function loadSavedRound() {
     let savedID = parseInt(select.value);
     let rows = await db.scores.where("id").equals(savedID).toArray();
     let scores = rows[0]
+    let round = await getRoundByName(scores.round)[0];
+    scoring = round.passes[0].scoring;
     console.log(scores);
     generateRoundSheet(scores.round)
     end_arrows = scores.arrowsPerEnd;
@@ -652,7 +663,11 @@ async function loadScoreSheet(id = "none") {
     //let id = 1726663525520
 
     let rounds = await db.scores.where("id").equals(id).toArray();
+    console.log(rounds);
     let round = rounds[0];
+
+    let roundInfo = getRoundByName(round.round)[0];
+    scoring = roundInfo.passes[0].scoring;
 
     //Clear existing shown scorecard
 
@@ -730,10 +745,14 @@ function scorecard(score) {
             newend.scores = end
             newend.hits = countArray(["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "X"], end)
             newend.exes = countArray(["X"], end);
-            newend.golds = countArray(["X", "9", "10"], end);
+            if (scoring.includes("5_zone")) {
+                newend.golds = countArray(["X", "9", "10"], end);
+            } else {
+                newend.golds = countArray(["X", "10"], end);
+            }
             newend.total = sumEnd(end);
-            rt += newend.total
-            newend.rtotal = rt
+            rt += newend.total;
+            newend.rtotal = rt;
             console.log(end);
             newends.push(newend);
 
@@ -938,7 +957,22 @@ function setScore(val) {
 
 function showKeypad() {
     let keypad = document.querySelector("#keypad");
-    keypad.style.display = "block"
+    keypad.style.display = "block";
+    let fiveZoneExclude = ["#keypad2", "#keypad4", "#keypad6", "#keypad8", "#keypad10", "#keypadx"];
+
+    if (scoring.includes("5_zone")) {
+        for (id of fiveZoneExclude) {
+            let ele = document.querySelector(id);
+            ele.disabled = true;
+            ele.style.opacity = 0.1;
+        }
+    } else {
+        for (id of fiveZoneExclude) {
+            let ele = document.querySelector(id);
+            ele.disabled = false;
+            ele.style.opacity = 1;
+        }
+    }
 }
 
 function hideKeypad() {
