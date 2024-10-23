@@ -902,7 +902,7 @@ function parseEnds(array) {
 function countArray(vals, array) {
     let result = 0;
     for (ar of array) {
-        if (ar.toString().toUpperCase() in vals) {
+        if (vals.includes(ar.toString().toUpperCase())) {
             result++
         }
     }
